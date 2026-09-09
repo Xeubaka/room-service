@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { createClient } from "redis";
-import { nanoid } from "nanoid";
+import { createRoom, joinRoom } from "./rooms.js";
 
 const app = express();
 app.use(cors());
@@ -19,14 +19,8 @@ app.get("/health", (_req, res) => res.json({ status: "ok", service: "room-servic
 
 // Create a room. Returns a short code players use to join.
 app.post("/rooms", async (_req, res) => {
-  const roomId = nanoid(6).toUpperCase();
-  const room = {
-    id: roomId,
-    createdAt: Date.now(),
-    players: [],
-    status: "waiting"
-  };
-  await redis.set(`room:${roomId}`, JSON.stringify(room));
+  const room = createRoom();
+  await redis.set(`room:${room.id}`, JSON.stringify(room));
   res.status(201).json(room);
 });
 
@@ -44,15 +38,7 @@ app.post("/rooms/:id/join", async (req, res) => {
   if (!raw) return res.status(404).json({ error: "room not found" });
 
   const room = JSON.parse(raw);
-  let color = "spectator";
-  if (!room.players.find((p) => p.color === "white")) color = "white";
-  else if (!room.players.find((p) => p.color === "black")) color = "black";
-
-  const player = { id: nanoid(8), name: playerName || `Player-${nanoid(4)}`, color };
-  room.players.push(player);
-  if (room.players.filter((p) => p.color !== "spectator").length === 2) {
-    room.status = "ready";
-  }
+  const player = joinRoom(room, playerName);
 
   await redis.set(`room:${req.params.id}`, JSON.stringify(room));
   res.json({ room, you: player });
