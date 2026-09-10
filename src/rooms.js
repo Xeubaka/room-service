@@ -1,7 +1,13 @@
-import { nanoid } from "nanoid";
+import { customAlphabet, nanoid } from "nanoid";
+
+// nanoid()'s default alphabet includes "_" and "-", which .toUpperCase()
+// can't strip (they have no case) — occasionally produced room codes like
+// "26_QZU" that failed the "clean, shareable code" contract this ID exists
+// for. A restricted alphabet guarantees it instead of leaving it to chance.
+const roomCode = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
 
 export function createRoom() {
-  return { id: nanoid(6).toUpperCase(), createdAt: Date.now(), players: [], status: "waiting" };
+  return { id: roomCode(), createdAt: Date.now(), players: [], status: "waiting" };
 }
 
 // First joiner becomes white, second becomes black, anyone after is a spectator.
