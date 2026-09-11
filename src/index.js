@@ -42,10 +42,24 @@ app.post("/rooms/:id/join", async (req, res) => {
   if (!raw) return res.status(404).json({ error: "room not found" });
 
   const room = JSON.parse(raw);
+  if (room.status === "closed") return res.status(410).json({ error: "room is closed" });
   const player = joinRoom(room, playerName);
 
   await redis.set(`room:${req.params.id}`, JSON.stringify(room));
   res.json({ room, you: player });
+});
+
+// Finalizes a room (e.g. game-service calling this after a declined/expired
+// rematch offer) — a closed room's code can't be joined again, so a stale
+// code from a finished match can't be reused by a third party.
+app.post("/rooms/:id/close", async (req, res) => {
+  const raw = await redis.get(`room:${req.params.id}`);
+  if (!raw) return res.status(404).json({ error: "room not found" });
+
+  const room = JSON.parse(raw);
+  room.status = "closed";
+  await redis.set(`room:${req.params.id}`, JSON.stringify(room));
+  res.json(room);
 });
 
 app.listen(PORT, () => console.log(`room-service listening on ${PORT}`));
