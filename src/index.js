@@ -31,7 +31,8 @@ app.get("/rooms/:id", async (req, res) => {
   res.json(JSON.parse(raw));
 });
 
-// Join a room. First joiner becomes white, second becomes black, anyone after is a spectator.
+// Join a room. Color is a coin flip decided once at room creation (room.whiteJoinsFirst),
+// not who happens to join first; anyone after both seats are filled is a spectator.
 app.post("/rooms/:id/join", async (req, res) => {
   const { playerName } = req.body || {};
   const raw = await redis.get(`room:${req.params.id}`);

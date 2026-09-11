@@ -7,18 +7,24 @@ import { customAlphabet, nanoid } from "nanoid";
 const roomCode = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 6);
 
 export function createRoom() {
-  return { id: roomCode(), createdAt: Date.now(), players: [], status: "waiting" };
+  // Decided once per room, at creation, so which seat (first joiner vs.
+  // second) gets white is a coin flip rather than always "whoever clicks
+  // join first" — join order is still recorded via players' array
+  // position, it just no longer determines color.
+  return { id: roomCode(), createdAt: Date.now(), players: [], status: "waiting", whiteJoinsFirst: Math.random() < 0.5 };
 }
 
-// First joiner becomes white, second becomes black, anyone after is a spectator.
-export function assignColor(players) {
-  if (!players.find((p) => p.color === "white")) return "white";
-  if (!players.find((p) => p.color === "black")) return "black";
+// First empty seat gets whichever color the room's own coin flip picked,
+// second seat gets the other, anyone after is a spectator.
+export function assignColor(players, whiteJoinsFirst) {
+  const seated = players.filter((p) => p.color === "white" || p.color === "black").length;
+  if (seated === 0) return whiteJoinsFirst ? "white" : "black";
+  if (seated === 1) return whiteJoinsFirst ? "black" : "white";
   return "spectator";
 }
 
 export function joinRoom(room, playerName) {
-  const color = assignColor(room.players);
+  const color = assignColor(room.players, room.whiteJoinsFirst);
   const player = { id: nanoid(8), name: playerName || `Player-${nanoid(4)}`, color };
   room.players.push(player);
   if (room.players.filter((p) => p.color !== "spectator").length === 2) {
