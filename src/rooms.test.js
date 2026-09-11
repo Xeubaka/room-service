@@ -1,12 +1,28 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createRoom, assignColor, joinRoom } from "./rooms.js";
+import { createRoom, assignColor, joinRoom, normalizeTimeControlMinutes } from "./rooms.js";
 
-test("createRoom starts empty and waiting", () => {
+test("createRoom starts empty and waiting, defaulting to a 3-minute clock", () => {
   const room = createRoom();
   assert.equal(room.status, "waiting");
   assert.deepEqual(room.players, []);
   assert.match(room.id, /^[A-Z0-9]{6}$/);
+  assert.equal(room.timeControlMs, 3 * 60 * 1000);
+});
+
+test("createRoom honors a valid host-chosen time control", () => {
+  assert.equal(createRoom(10).timeControlMs, 10 * 60 * 1000);
+  assert.equal(createRoom(1).timeControlMs, 1 * 60 * 1000);
+});
+
+test("normalizeTimeControlMinutes clamps to [1, 60] and defaults invalid input to 3", () => {
+  assert.equal(normalizeTimeControlMinutes(0), 1);
+  assert.equal(normalizeTimeControlMinutes(-5), 1);
+  assert.equal(normalizeTimeControlMinutes(999), 60);
+  assert.equal(normalizeTimeControlMinutes(undefined), 3);
+  assert.equal(normalizeTimeControlMinutes("not a number"), 3);
+  assert.equal(normalizeTimeControlMinutes(NaN), 3);
+  assert.equal(normalizeTimeControlMinutes(15), 15);
 });
 
 test("assignColor is decided by the room's coin flip, not join order", () => {

@@ -17,9 +17,12 @@ const PORT = process.env.PORT || 3001;
 // Health check — CI/CD and orchestrators (ECS, k8s) poll this
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "room-service" }));
 
-// Create a room. Returns a short code players use to join.
-app.post("/rooms", async (_req, res) => {
-  const room = createRoom();
+// Create a room. Returns a short code players use to join. Optional
+// { timeControlMinutes } sets the per-player clock (clamped/defaulted in
+// createRoom) — both joiners read it back off the room object.
+app.post("/rooms", async (req, res) => {
+  const { timeControlMinutes } = req.body || {};
+  const room = createRoom(timeControlMinutes);
   await redis.set(`room:${room.id}`, JSON.stringify(room));
   res.status(201).json(room);
 });
